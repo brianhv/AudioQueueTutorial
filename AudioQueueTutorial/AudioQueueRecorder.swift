@@ -74,7 +74,8 @@ public class AudioQueueRecorder {
         
         // create audio input queue
         var queue: AudioQueueRef?
-        if AudioQueueNewInput(&info.mDataFormat,
+        var dataFormat = info.mDataFormat
+        if AudioQueueNewInput(&dataFormat,
                               audioQueueInputCallback,
                               &info,
                               CFRunLoopGetCurrent(),
@@ -95,9 +96,11 @@ public class AudioQueueRecorder {
         // create file
         let path = (NSTemporaryDirectory() as NSString).appendingPathComponent("audio.wav")
         outputUrl = URL(fileURLWithPath: path)
-        if AudioFileCreateWithURL(outputUrl as CFURL, kAudioFileAIFFType, &info.mDataFormat, .eraseFile, &info.mAudioFile) != noErr {
+        var audioFile: AudioFileID?
+        if AudioFileCreateWithURL(outputUrl as CFURL, kAudioFileAIFFType, &info.mDataFormat, .eraseFile, &audioFile) != noErr {
             return nil
         }
+        info.mAudioFile = audioFile
         
         // allocate buffer
         info.bufferByteSize = kNumberPackages * info.mDataFormat.mBytesPerPacket
@@ -127,7 +130,7 @@ extension AudioQueueRecorder {
     public func start() {
         info.mIsRunning = true
         do {
-            try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryRecord)
+            try AVAudioSession.sharedInstance().setCategory(AVAudioSession.Category.record)
         } catch {
             return
         }
@@ -137,7 +140,7 @@ extension AudioQueueRecorder {
     public func stop() {
         info.mIsRunning = false
         do {
-            try AVAudioSession.sharedInstance().setCategory(AVAudioSessionCategoryPlayback)
+            try AVAudioSession.sharedInstance().setCategory(AVAudioSession.Category.playback)
         } catch {
             return
         }
